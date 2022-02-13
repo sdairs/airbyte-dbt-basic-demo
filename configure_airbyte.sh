@@ -62,7 +62,7 @@ EOF
 
 POST_CREATE_SRC=`curl -s -XPOST -H 'Content-Type: application/json' ${AB_API}${CREATE_SRC} -d "$(source_json_data)"`
 
-SRC_ID=`echo ${POST_CREATE_SRC} | jq '.sourceId'`
+SRC_ID=`echo ${POST_CREATE_SRC} | jq '.sourceId'  | tr -d '"'`
 
 echo "Source ID: ${SRC_ID}"
 
@@ -92,15 +92,89 @@ EOF
 
 POST_CREATE_DEST=`curl -s -XPOST -H 'Content-Type: application/json' ${AB_API}${CREATE_DEST} -d "$(dest_json_data)"`
 
-DEST_ID=`echo ${POST_CREATE_DEST} | jq '.destinationId'`
+DEST_ID=`echo ${POST_CREATE_DEST} | jq '.destinationId' | tr -d '"'`
 
 echo "Destination ID: ${DEST_ID}"
 
 # Create CONNECTION
 
+conn_json_data()
+{
+  cat <<EOF
+{
+  "name": "default",
+  "namespaceDefinition": "source",
+  "prefix": "abt_",
+  "sourceId": "${SRC_ID}",
+  "destinationId": "${DEST_ID}",
+  "syncCatalog": {
+    "streams": [
+      {
+        "stream": {
+          "name": "test",
+          "jsonSchema": {
+            "type": "object",
+            "properties": {
+              "col1": {
+                "type": "string"
+              },
+              "col2": {
+                "type": "string"
+              }
+            }
+          },
+          "supportedSyncModes": [
+            "full_refresh",
+            "incremental"
+          ],
+          "sourceDefinedCursor": null,
+          "defaultCursorField": [],
+          "sourceDefinedPrimaryKey": [],
+          "namespace": "test"
+        },
+        "config": {
+          "syncMode": "full_refresh",
+          "cursorField": [],
+          "destinationSyncMode": "append",
+          "primaryKey": [],
+          "aliasName": "test",
+          "selected": true
+        }
+      }
+    ]
+  },
+  "schedule": null,
+  "status": "active",
+  "resourceRequirements": {
+    "cpu_request": null,
+    "cpu_limit": null,
+    "memory_request": null,
+    "memory_limit": null
+  }
+}
+EOF
+}
+
+POST_CREATE_CONN=`curl -s -XPOST -H 'Content-Type: application/json' ${AB_API}${CREATE_CONN} -d "$(conn_json_data)"`
+
+CONN_ID=`echo ${POST_CREATE_CONN} | jq '.connectionId' | tr -d '"'`
+
+echo "Destination ID: ${CONN_ID}"
 
 # Start a sync
 
+echo "Starting sync"
+
+sync_json_data()
+{
+  cat <<EOF
+{
+    "connectionId": "${CONN_ID}"
+}
+EOF
+}
+
+POST_SYNC_CONN=`curl -s -XPOST -H 'Content-Type: application/json' ${AB_API}${SYNC_CONN} -d "$(sync_json_data)"`
 
 # FIN
 
