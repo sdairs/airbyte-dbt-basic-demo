@@ -13,7 +13,9 @@ Configures Airbyte with:
 Triggers the Connection to sync, resulting in 5 records in MariaDB
 
 # How
-Requires Docker
+Requires:
+- Docker
+- jq
 
 Run `start.sh`
 
