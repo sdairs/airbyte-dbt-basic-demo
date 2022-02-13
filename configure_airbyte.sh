@@ -7,6 +7,7 @@ GET_SRC='/v1/sources/get'
 GET_DEST='/v1/destinations/get'
 GET_CONN='/v1/connections/get'
 GET_WORK='/v1/workspaces/get'
+GET_HEALTH='/v1/health'
 
 LIST_WORK='/v1/workspaces/list'
 
@@ -16,6 +17,10 @@ CREATE_CONN='/v1/connections/create'
 CREATE_WORK='/v1/workspaces/create'
 
 SYNC_CONN='/v1/connections/sync'
+
+# Wait for Airbyte to be ready
+
+while [[ "$(curl -s -XGET ${AB_API}${GET_HEALTH} | jq '.available' | tr -d '"')" != "true" ]]; do echo "Waiting for Airbyte to start..."; sleep 5; done
 
 # Get default workspace ID
 
