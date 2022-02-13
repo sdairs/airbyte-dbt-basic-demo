@@ -1,9 +1,5 @@
+docker-compose -f stack.yml down -v
+
 cd airbyte
-docker-compose down
-docker volume rm airbyte-dbt_mariadb
-docker volume rm airbyte-dbt_postgres
-docker volume rm airbyte_data
-docker volume rm airbyte_db
-docker volume rm airbyte_workspace
+docker-compose down -v
 cd ..
-rm -rf ./airbyte
