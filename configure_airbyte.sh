@@ -8,6 +8,7 @@ GET_DEST='/v1/destinations/get'
 GET_CONN='/v1/connections/get'
 GET_WORK='/v1/workspaces/get'
 GET_HEALTH='/v1/health'
+GET_OP='/v1/operations/get'
 
 LIST_WORK='/v1/workspaces/list'
 
@@ -15,6 +16,7 @@ CREATE_SRC='/v1/sources/create'
 CREATE_DEST='/v1/destinations/create'
 CREATE_CONN='/v1/connections/create'
 CREATE_WORK='/v1/workspaces/create'
+CREATE_OP='/v1/operations/create'
 
 SYNC_CONN='/v1/connections/sync'
 
@@ -55,7 +57,7 @@ source_json_data()
             "method": "Standard"
         }
     },
-    "name": "Postgres API Test"
+    "name": "PostgreSQL"
 }
 EOF
 }
@@ -64,7 +66,7 @@ POST_CREATE_SRC=`curl -s -XPOST -H 'Content-Type: application/json' ${AB_API}${C
 
 SRC_ID=`echo ${POST_CREATE_SRC} | jq '.sourceId'  | tr -d '"'`
 
-echo "Source ID: ${SRC_ID}"
+echo "PostgreSQL Source ID: ${SRC_ID}"
 
 # Create DEST
 
@@ -85,7 +87,7 @@ dest_json_data()
       "tunnel_method": "NO_TUNNEL"
     }
   },
-  "name": "Maria Dest"
+  "name": "MariaDB"
 }
 EOF
 }
@@ -94,7 +96,7 @@ POST_CREATE_DEST=`curl -s -XPOST -H 'Content-Type: application/json' ${AB_API}${
 
 DEST_ID=`echo ${POST_CREATE_DEST} | jq '.destinationId' | tr -d '"'`
 
-echo "Destination ID: ${DEST_ID}"
+echo "MariaDB Destination ID: ${DEST_ID}"
 
 # Create CONNECTION
 
@@ -159,7 +161,7 @@ POST_CREATE_CONN=`curl -s -XPOST -H 'Content-Type: application/json' ${AB_API}${
 
 CONN_ID=`echo ${POST_CREATE_CONN} | jq '.connectionId' | tr -d '"'`
 
-echo "Destination ID: ${CONN_ID}"
+echo "Postgres > MariaDB Connection ID: ${CONN_ID}"
 
 # Start a sync
 
@@ -175,6 +177,191 @@ EOF
 }
 
 POST_SYNC_CONN=`curl -s -XPOST -H 'Content-Type: application/json' ${AB_API}${SYNC_CONN} -d "$(sync_json_data)"`
+
+
+# Create COVID File Source
+
+file_json_data()
+{
+  cat <<EOF
+{
+	"sourceDefinitionId": "778daa7c-feaf-4db6-96f3-70fd645acc77",
+	"workspaceId": "${WORKSPACE_ID}",
+	"connectionConfiguration": {
+		"url": "https://storage.googleapis.com/covid19-open-data/v2/latest/epidemiology.csv",
+		"format": "csv",
+		"provider": {
+			"storage": "HTTPS"
+		},
+		"dataset_name": "raw_covid"
+	},
+	"name": "Covid File Source"
+}
+EOF
+}
+
+POST_CREATE_FILE=`curl -s -XPOST -H 'Content-Type: application/json' ${AB_API}${CREATE_SRC} -d "$(file_json_data)"`
+
+FILE_ID=`echo ${POST_CREATE_FILE} | jq '.sourceId' | tr -d '"'`
+
+echo "File Source ID: ${FILE_ID}"
+
+# Postgres Destination
+
+pg_dest_json_data()
+{
+  cat <<EOF
+{
+	"destinationDefinitionId": "25c5221d-dce2-4163-ade9-739ef790f503",
+	"workspaceId": "${WORKSPACE_ID}",
+	"connectionConfiguration": {
+		"ssl": false,
+		"host": "localhost",
+		"port": 5432,
+		"schema": "covid",
+		"database": "src_db",
+		"password": "password",
+		"username": "postgres",
+		"tunnel_method": {
+			"tunnel_method": "NO_TUNNEL"
+		}
+	},
+	"name": "PostgreSQL"
+}
+EOF
+}
+
+POST_CREATE_PG_DEST=`curl -s -XPOST -H 'Content-Type: application/json' ${AB_API}${CREATE_DEST} -d "$(pg_dest_json_data)"`
+
+PG_DEST_ID=`echo ${POST_CREATE_PG_DEST} | jq '.destinationId' | tr -d '"'`
+
+echo "Postgres Destination ID: ${PG_DEST_ID}"
+
+# Create basic normalisation operation
+
+op_json_data()
+{
+  cat <<EOF
+{
+	"workspaceId": "${WORKSPACE_ID}",
+	"name": "Normalization",
+	"operatorConfiguration": {
+		"operatorType": "normalization",
+		"normalization": {
+			"option": "basic"
+		},
+		"dbt": null
+	}
+}
+EOF
+}
+
+POST_CREATE_OP=`curl -s -XPOST -H 'Content-Type: application/json' ${AB_API}${CREATE_OP} -d "$(op_json_data)"`
+
+OP_ID=`echo ${POST_CREATE_OP} | jq '.operationId' | tr -d '"'`
+
+echo "Basic Normalisation Op ID: ${OP_ID}"
+
+# Create File > Postgres connection
+
+file_conn_json_data()
+{
+  cat <<EOF
+{
+	"name": "default",
+	"namespaceDefinition": "source",
+	"prefix": "",
+	"sourceId": "${FILE_ID}",
+	"destinationId": "${PG_DEST_ID}",
+  "operationIds": ["${OP_ID}"],
+	"syncCatalog": {
+		"streams": [{
+			"stream": {
+				"name": "raw_covid",
+				"jsonSchema": {
+					"type": "object",
+					"$schema": "http://json-schema.org/draft-07/schema#",
+					"properties": {
+						"key": {
+							"type": ["string", "null"]
+						},
+						"date": {
+							"type": ["string", "null"]
+						},
+						"new_tested": {
+							"type": ["number", "null"]
+						},
+						"new_deceased": {
+							"type": ["number", "null"]
+						},
+						"total_tested": {
+							"type": ["number", "null"]
+						},
+						"new_confirmed": {
+							"type": ["number", "null"]
+						},
+						"new_recovered": {
+							"type": ["number", "null"]
+						},
+						"total_deceased": {
+							"type": ["number", "null"]
+						},
+						"total_confirmed": {
+							"type": ["number", "null"]
+						},
+						"total_recovered": {
+							"type": ["number", "null"]
+						}
+					}
+				},
+				"supportedSyncModes": ["full_refresh"],
+				"sourceDefinedCursor": null,
+				"defaultCursorField": [],
+				"sourceDefinedPrimaryKey": [],
+				"namespace": null
+			},
+			"config": {
+				"syncMode": "full_refresh",
+				"cursorField": [],
+				"destinationSyncMode": "append",
+				"primaryKey": [],
+				"aliasName": "raw_covid",
+				"selected": true
+			}
+		}]
+	},
+	"schedule": null,
+	"status": "active",
+	"resourceRequirements": {
+		"cpu_request": null,
+		"cpu_limit": null,
+		"memory_request": null,
+		"memory_limit": null
+	}
+}
+EOF
+}
+
+POST_CREATE_FILE_CONN=`curl -s -XPOST -H 'Content-Type: application/json' ${AB_API}${CREATE_CONN} -d "$(file_conn_json_data)"`
+
+FILE_CONN_ID=`echo ${POST_CREATE_FILE_CONN} | jq '.connectionId' | tr -d '"'`
+
+echo "File > Postgres Connection ID: ${FILE_CONN_ID}"
+
+# Start a sync
+
+echo "Starting sync"
+
+file_sync_json_data()
+{
+  cat <<EOF
+{
+    "connectionId": "${FILE_CONN_ID}"
+}
+EOF
+}
+
+POST_FILE_SYNC_CONN=`curl -s -XPOST -H 'Content-Type: application/json' ${AB_API}${SYNC_CONN} -d "$(file_sync_json_data)"`
 
 # FIN
 
