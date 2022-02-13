@@ -24,3 +24,14 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: password
       MARIADB_DATABASE: dest_db
+
+  pg_admin:
+    container_name: pg_admin
+    image: dpage/pgadmin4
+    restart: always
+    ports:
+      - 8080:8080
+    environment:
+      PGADMIN_LISTEN_PORT: 8080
+      PGADMIN_DEFAULT_EMAIL: me@me.me
+      PGADMIN_DEFAULT_PASSWORD: password
