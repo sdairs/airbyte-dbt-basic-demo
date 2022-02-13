@@ -10,3 +10,5 @@ insert into test.test values
 ('row3_col1', 'row3_col2'),
 ('row4_col1', 'row4_col2'),
 ('row5_col1', 'row5_col2');
+
+CREATE SCHEMA covid AUTHORIZATION postgres;
