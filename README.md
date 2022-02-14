@@ -34,6 +34,11 @@ When the script it complete, it will print your Airbyte URL to the terminal.
 
 **Note**: You should use the Airbyte URL that is print to terminal, as it includes the default Workspace ID. Opening the link from Docker Desktop can create a new Workspace and you may not see any connections in the UI.
 
+## teardown.sh
+This completely removes the Docker resources that were created by this demo e.g. containers, networks, volumes, etc.
+
+You can use this to clean up when you are done, or to reset your environment if you wish to start again.
+
 # Quickstart
 
 Run `start.sh`
@@ -48,3 +53,5 @@ In Postgres you will find a database called `src_db` with a schema `covid` and t
 In MariaDB you will find a database called `dest_sb` and the raw_covid table prefixed with abt_ e.g. `abt_raw_covid`.
 
 **Note**: pgAdmin is not pre-configured with the Postgres server. You need to add a new Server connection, using the Postgres details that are printed to the terminal.
+
+When you are done, run `teardown.sh` to remove the Docker resources created by this demo.
