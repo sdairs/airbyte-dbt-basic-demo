@@ -9,5 +9,5 @@ create table "src_db".covid."typed_covid" as (
         cast(total_deceased as integer),
         cast(total_confirmed as integer),
         cast(total_recovered as integer)
-    from {{ ref('raw_covid') }}
+    from "src_db".covid."raw_covid"
 );
