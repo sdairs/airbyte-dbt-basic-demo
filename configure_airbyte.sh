@@ -239,28 +239,55 @@ echo "Postgres Destination ID: ${PG_DEST_ID}"
 
 # Create basic normalisation operation
 
-op_json_data()
+# op_json_data()
+# {
+#   cat <<EOF
+# {
+# 	"workspaceId": "${WORKSPACE_ID}",
+# 	"name": "Normalization",
+# 	"operatorConfiguration": {
+# 		"operatorType": "normalization",
+# 		"normalization": {
+# 			"option": "basic"
+# 		},
+# 		"dbt": null
+# 	}
+# }
+# EOF
+# }
+
+# POST_CREATE_OP=`curl -s -XPOST -H 'Content-Type: application/json' ${AB_API}${CREATE_OP} -d "$(op_json_data)"`
+
+# OP_ID=`echo ${POST_CREATE_OP} | jq '.operationId' | tr -d '"'`
+
+# echo "Basic Normalisation Op ID: ${OP_ID}"
+
+# Create custom DBT operation
+dbt_op_json_data()
 {
   cat <<EOF
 {
 	"workspaceId": "${WORKSPACE_ID}",
-	"name": "Normalization",
+	"name": "Typed Covid Data",
 	"operatorConfiguration": {
-		"operatorType": "normalization",
-		"normalization": {
-			"option": "basic"
-		},
-		"dbt": null
+		"operatorType": "dbt",
+		"normalization": null,
+		"dbt": {
+			"gitRepoUrl": "https://github.com/sdairs/airbyte-dbt-basic-demo",
+			"gitRepoBranch": null,
+			"dockerImage": "fishtownanalytics/dbt:1.0.0",
+			"dbtArguments": "run"
+		}
 	}
 }
 EOF
 }
 
-POST_CREATE_OP=`curl -s -XPOST -H 'Content-Type: application/json' ${AB_API}${CREATE_OP} -d "$(op_json_data)"`
+POST_CREATE_DBT_OP=`curl -s -XPOST -H 'Content-Type: application/json' ${AB_API}${CREATE_OP} -d "$(dbt_op_json_data)"`
 
-OP_ID=`echo ${POST_CREATE_OP} | jq '.operationId' | tr -d '"'`
+DBT_OP_ID=`echo ${POST_CREATE_DBT_OP} | jq '.operationId' | tr -d '"'`
 
-echo "Basic Normalisation Op ID: ${OP_ID}"
+echo "DBT Op ID: ${DBT_OP_ID}"
 
 # Create File > Postgres connection
 
@@ -273,7 +300,7 @@ file_conn_json_data()
 	"prefix": "",
 	"sourceId": "${FILE_ID}",
 	"destinationId": "${PG_DEST_ID}",
-  "operationIds": ["${OP_ID}"],
+  "operationIds": ["${DBT_OP_ID}"],
 	"syncCatalog": {
 		"streams": [{
 			"stream": {
