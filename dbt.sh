@@ -4,4 +4,9 @@
 # docker cp airbyte-server:/tmp/workspace/${NORMALIZE_WORKSPACE}/build/run/airbyte_utils/models/generated/ models/
 
 # Locally build dbt models
+
+python3 -m venv .venv
+source .venv/bin/activate
+pip install dbt-postgres
+
 dbt build --profiles-dir ./.dbt
