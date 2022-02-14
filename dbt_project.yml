@@ -22,5 +22,3 @@ require-dbt-version: [">=1.0.0", "<2.0.0"]
 models:
   covid:
       materialized: table
-      staging:
-        materialized: view
