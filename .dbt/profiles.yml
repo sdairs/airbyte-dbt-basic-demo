@@ -1,0 +1,12 @@
+covid:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: localhost
+      user: postgres
+      password: password
+      port: 5432
+      dbname: src_db
+      schema: covid
+      threads: 4

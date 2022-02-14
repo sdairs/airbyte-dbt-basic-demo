@@ -1,1 +1,4 @@
 airbyte
+.venv
+logs
+target
